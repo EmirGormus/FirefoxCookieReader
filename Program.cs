@@ -3,25 +3,25 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Diagnostics; // İşlem için gerekli
-using System.Globalization; // CultureInfo için gerekli
+using System.Diagnostics; 
+using System.Globalization; 
 
 public class FirefoxCookieReader
 {
     public static void Main(string[] args)
     {
-        string targetWebsite = "trendyol.com"; // Çerezlerini almak istediğiniz web sitesi
+        string targetWebsite = "trendyol.com"; 
 
-        // 1. PowerShell komutunu çalıştır ve çıktıyı yakala
+        
         List<string> sqliteFiles = GetSQLiteFilesFromPowerShell();
         if (sqliteFiles == null || sqliteFiles.Count == 0)
         {
             Console.WriteLine("PowerShell komutu tarafından hiçbir SQLite dosyası bulunamadı.");
-            Console.ReadLine(); // Konsolu açık tut
+            Console.ReadLine(); 
             return;
         }
 
-        // 2. PowerShell tarafından bulunan her SQLite dosyasını işle
+        
         foreach (string sqliteFilePath in sqliteFiles)
         {
             Console.WriteLine($"\nSQLite dosyası işleniyor: {sqliteFilePath}");
@@ -29,16 +29,16 @@ public class FirefoxCookieReader
         }
 
         Console.WriteLine("\nTüm SQLite dosyaları işlendi.");
-        Console.ReadLine(); // Konsolu açık tut
+        Console.ReadLine(); 
     }
 
-    // PowerShell komutunu çalıştıran ve çıktıyı döndüren fonksiyon
+    
     private static List<string> GetSQLiteFilesFromPowerShell()
     {
         List<string> files = new List<string>();
         try
         {
-            // Düzeltilmiş PowerShell komutu
+            
             string command = @"
                 Get-ChildItem -Path ""$env:USERPROFILE\AppData"" -Include 'cookies.sqlite','Cookies' -Recurse -File -ErrorAction SilentlyContinue |
                 Where-Object {
@@ -58,42 +58,41 @@ public class FirefoxCookieReader
                 Select-Object -ExpandProperty FullName
                 ";
 
-            // İşlem kurulumu
+            
             ProcessStartInfo psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
                 Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true, // Hataları da yakala
-                CreateNoWindow = true, // PowerShell penceresini gösterme
+                RedirectStandardError = true, 
+                CreateNoWindow = true, 
             };
 
-            // İşlemi yürüt
+            
             using (Process process = new Process { StartInfo = psi })
             {
                 process.Start();
 
-                // Çıktıyı oku
+                
                 using (StreamReader reader = process.StandardOutput)
                 {
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {
-                        if (!string.IsNullOrWhiteSpace(line)) // Önemli: Boş satırları filtrele.
+                        if (!string.IsNullOrWhiteSpace(line)) 
                         {
                             files.Add(line);
                         }
                     }
                 }
 
-                // Hataları oku
+                
                 string errorOutput = process.StandardError.ReadToEnd();
                 if (!string.IsNullOrEmpty(errorOutput))
                 {
                     Console.WriteLine($"PowerShell Hatası: {errorOutput}");
-                    // Hata kritikse burada bir istisna atmayı düşünün.
-                    return null; // Veya hatayı uygulamanız için uygun şekilde işleyin
+                    return null; 
                 }
                 process.WaitForExit();
                 if (process.ExitCode != 0)
@@ -138,7 +137,6 @@ public class FirefoxCookieReader
             connection = new SqliteConnection(connectionString);
             connection.Open();
 
-            // Tablo adlarını kontrol et
             List<string> availableTables = new();
             using (var cmd = connection.CreateCommand())
             {
@@ -160,7 +158,7 @@ public class FirefoxCookieReader
             }
             else if (availableTables.Contains("cookies"))
             {
-                tableName = "cookies"; // Chromium
+                tableName = "cookies"; 
             }
             else
             {
@@ -188,7 +186,7 @@ public class FirefoxCookieReader
                 string name = cookieReader.GetString(0);
                 string value = isFirefox ? cookieReader.GetString(1) : "[ENCRYPTED]";
 
-                string host = isFirefox ? cookieReader.GetString(2) : cookieReader.GetString(2); // host or host_key
+                string host = isFirefox ? cookieReader.GetString(2) : cookieReader.GetString(2);
                 string path = cookieReader.GetString(3);
 
                 DateTime expiry = isFirefox
@@ -244,10 +242,10 @@ public class FirefoxCookieReader
 
     private static DateTime ConvertChromeTimestamp(long chromeTimestamp)
     {
-        // Chromium timestamp starts from Jan 1, 1601 in microseconds
+        
         long unixEpochTicks = new DateTime(1970, 1, 1).Ticks;
         long chromeEpochTicks = new DateTime(1601, 1, 1).Ticks;
-        long timestampTicks = chromeTimestamp * 10; // microseconds to ticks
+        long timestampTicks = chromeTimestamp * 10; 
         DateTime chromeEpoch = new DateTime(1601, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         return chromeEpoch.AddTicks(timestampTicks).ToLocalTime();
     }
